@@ -1,0 +1,37 @@
+name: Slow uh-oh meter
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Slow meter fill by 3x
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          old = "state.uh+=dt*(4+Math.max(0,gap-.28)*32+(input.reach&&!catching?5:0));"
+          new = "state.uh+=dt*(4+Math.max(0,gap-.28)*32+(input.reach&&!catching?5:0))/3;"
+          if old not in s:
+              raise SystemExit('Uh-oh meter rate block not found')
+          s = s.replace(old, new, 1)
+          s = s.replace("state.uh+=3}}", "state.uh+=1}}", 1)
+          p.write_text(s)
+          PY
+          rm .github/workflows/slow-uh-meter.yml
+      - name: Commit gameplay tuning
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Make uh-oh meter fill three times slower"
+          git push
