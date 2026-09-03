@@ -1,0 +1,36 @@
+name: Add recurring uh-oh voice effect
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Patch recurring voice line
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          old = "if(state.elapsed>state.nextUh){showSpeech(Math.random()<.65?'UH OH!':'UH OHHHH!');tone(260,.07,'triangle',.025,-70);state.nextUh+=rand(2.6,4.3)}"
+          new = "if(state.elapsed>state.nextUh){speakUhOh();state.nextUh+=rand(3.2,5.0)}"
+          if old not in s:
+              raise SystemExit('Expected periodic uh-oh block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+          rm .github/workflows/add-uh-oh-voice.yml
+      - name: Commit game update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Play voiced uh-oh line during gameplay"
+          git push
