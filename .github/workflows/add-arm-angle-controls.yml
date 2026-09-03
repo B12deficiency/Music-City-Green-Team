@@ -1,0 +1,83 @@
+name: Add arm angle controls
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Add arm aiming controls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+
+          old="#reach{height:86px;background:linear-gradient(180deg,#f6c948,#d69319);color:#172012;border-color:#ffe891;font-size:20px;letter-spacing:.04em;text-shadow:0 1px rgba(255,255,255,.35)}\n#reach small{display:block;font-size:10px;letter-spacing:.13em;margin-top:2px;opacity:.75}"
+          new=old+"\n#armColumn{display:flex;flex-direction:column;gap:7px;min-width:0}\n#armAim{display:grid;grid-template-columns:1fr 1fr;gap:7px}\n.aim{appearance:none;border:1px solid rgba(255,255,255,.18);height:42px;border-radius:13px;background:rgba(4,13,8,.82);color:#f6f8f2;font-size:14px;font-weight:950;letter-spacing:.04em;box-shadow:0 5px 14px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.08);touch-action:none}\n.aim:active,.aim.down{transform:translateY(2px);background:rgba(27,67,44,.95)}"
+          if old not in s: raise SystemExit('reach CSS not found')
+          s=s.replace(old,new,1)
+
+          old="<div id=\"controls\"><button class=\"ctrl\" id=\"left\" type=\"button\" aria-label=\"Steer left\">◀</button><button class=\"ctrl\" id=\"reach\" type=\"button\" aria-label=\"Reach for trailer\">REACH!<small>HOLD IT</small></button><button class=\"ctrl\" id=\"right\" type=\"button\" aria-label=\"Steer right\">▶</button></div>"
+          new="<div id=\"controls\"><button class=\"ctrl\" id=\"left\" type=\"button\" aria-label=\"Steer left\">◀</button><div id=\"armColumn\"><div id=\"armAim\"><button class=\"aim\" id=\"aimUp\" type=\"button\" aria-label=\"Aim arm toward front of truck\">ARM ▲</button><button class=\"aim\" id=\"aimDown\" type=\"button\" aria-label=\"Aim arm toward rear of truck\">ARM ▼</button></div><button class=\"ctrl\" id=\"reach\" type=\"button\" aria-label=\"Reach for trailer\">REACH!<small>HOLD IT</small></button></div><button class=\"ctrl\" id=\"right\" type=\"button\" aria-label=\"Steer right\">▶</button></div>"
+          if old not in s: raise SystemExit('controls HTML not found')
+          s=s.replace(old,new,1)
+
+          old="<div class=\"mini\">Steer with ◀ ▶. When the trailer gets beside the driver's window, hold <b>REACH!</b> and hang on. Sound on recommended.</div>"
+          new="<div class=\"mini\">Steer with ◀ ▶. Use <b>ARM ▲ / ARM ▼</b> to aim the driver's arm, then hold <b>REACH!</b> when the hitch lines up. Sound on recommended.</div>"
+          if old in s: s=s.replace(old,new,1)
+
+          old="const els={speed:document.getElementById('speed'),uh:document.getElementById('uh'),best:document.getElementById('best'),catchWrap:document.getElementById('catchWrap'),catchBar:document.getElementById('catchBar'),catchPct:document.getElementById('catchPct'),cinema:document.getElementById('cinema'),cinemaText:document.getElementById('cinemaText'),speech:document.getElementById('speech'),controls:document.getElementById('controls'),overlay:document.getElementById('overlay'),overlayText:document.getElementById('overlayText'),start:document.getElementById('start'),left:document.getElementById('left'),right:document.getElementById('right'),reach:document.getElementById('reach'),toast:document.getElementById('toast')};"
+          new="const els={speed:document.getElementById('speed'),uh:document.getElementById('uh'),best:document.getElementById('best'),catchWrap:document.getElementById('catchWrap'),catchBar:document.getElementById('catchBar'),catchPct:document.getElementById('catchPct'),cinema:document.getElementById('cinema'),cinemaText:document.getElementById('cinemaText'),speech:document.getElementById('speech'),controls:document.getElementById('controls'),overlay:document.getElementById('overlay'),overlayText:document.getElementById('overlayText'),start:document.getElementById('start'),left:document.getElementById('left'),right:document.getElementById('right'),reach:document.getElementById('reach'),aimUp:document.getElementById('aimUp'),aimDown:document.getElementById('aimDown'),toast:document.getElementById('toast')};"
+          if old not in s: raise SystemExit('els block not found')
+          s=s.replace(old,new,1)
+
+          old="input={left:false,right:false,reach:false}"
+          new="input={left:false,right:false,reach:false,aimUp:false,aimDown:false}"
+          if old not in s: raise SystemExit('input block not found')
+          s=s.replace(old,new,1)
+
+          old="catchGlow:0,introClunk:false,introStage:0,potholes:[]"
+          new="catchGlow:0,introClunk:false,introStage:0,armAngle:0,potholes:[]"
+          if old not in s: raise SystemExit('reset state marker not found')
+          s=s.replace(old,new,1)
+
+          old="bindHold(els.left,'left');bindHold(els.right,'right');bindHold(els.reach,'reach');"
+          new="bindHold(els.left,'left');bindHold(els.right,'right');bindHold(els.reach,'reach');bindHold(els.aimUp,'aimUp');bindHold(els.aimDown,'aimDown');"
+          if old not in s: raise SystemExit('bind controls marker not found')
+          s=s.replace(old,new,1)
+
+          old="window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')input.left=true;if(e.key==='ArrowRight')input.right=true;if(e.key===' '){input.reach=true;e.preventDefault()}});window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')input.left=false;if(e.key==='ArrowRight')input.right=false;if(e.key===' ')input.reach=false});"
+          new="window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')input.left=true;if(e.key==='ArrowRight')input.right=true;if(e.key==='ArrowUp'){input.aimUp=true;e.preventDefault()}if(e.key==='ArrowDown'){input.aimDown=true;e.preventDefault()}if(e.key===' '){input.reach=true;e.preventDefault()}});window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')input.left=false;if(e.key==='ArrowRight')input.right=false;if(e.key==='ArrowUp')input.aimUp=false;if(e.key==='ArrowDown')input.aimDown=false;if(e.key===' ')input.reach=false});"
+          if old not in s: raise SystemExit('keyboard controls not found')
+          s=s.replace(old,new,1)
+
+          start=s.index('function drawArm(truck,trailer){')
+          end=s.index('\nfunction hitchPoint',start)
+          new_draw="function drawArm(truck,trailer){const side=trailer.x<truck.x?-1:1,sx=truck.x+side*25,sy=truck.y-6,reach=state.arm*(52+W*.075),a=state.armAngle||0,wiggle=Math.sin(state.elapsed*12)*3*state.arm,ex=sx+side*Math.cos(a)*reach,ey=sy-8+Math.sin(a)*reach+wiggle;if(state.arm>.02){line(sx,sy,lerp(sx,ex,.38),lerp(sy,ey,.38),13,'#5a8c47');line(lerp(sx,ex,.36),lerp(sy,ey,.36),ex,ey,9,'#d69a6b');ctx.fillStyle='#d69a6b';ctx.beginPath();ctx.arc(ex,ey,7,0,Math.PI*2);ctx.fill();for(let i=-1;i<=1;i++){const fx=ex+side*Math.cos(a)*(7+state.arm*5),fy=ey+Math.sin(a)*(7+state.arm*5)+i*3;line(ex,ey+i*2,fx,fy,2,'#d69a6b')}}return{x:ex,y:ey}}"
+          s=s[:start]+new_draw+s[end:]
+
+          old="state.arm=lerp(state.arm,input.reach?1:0,1-Math.pow(input.reach?.02:.06,dt));const truck=truckGeom(),trailer=trailerGeom(),side=trailer.x<truck.x?-1:1,armX=truck.x+side*(25+state.arm*(52+W*.075)),armY=truck.y-14,hitch=hitchPoint(trailer),fingerX=armX+side*12,fingerY=armY,dist=Math.hypot(fingerX-hitch.x,fingerY-hitch.y),catching=input.reach&&state.arm>.9&&dist<20;"
+          new="state.arm=lerp(state.arm,input.reach?1:0,1-Math.pow(input.reach?.02:.06,dt));const aim=(input.aimDown?1:0)-(input.aimUp?1:0);state.armAngle=clamp((state.armAngle||0)+aim*dt*1.55,-.68,.68);const truck=truckGeom(),trailer=trailerGeom(),side=trailer.x<truck.x?-1:1,a=state.armAngle||0,reachLen=state.arm*(52+W*.075),armX=truck.x+side*25+side*Math.cos(a)*reachLen,armY=truck.y-14+Math.sin(a)*reachLen+Math.sin(state.elapsed*12)*3*state.arm,hitch=hitchPoint(trailer),fingerX=armX+side*Math.cos(a)*12,fingerY=armY+Math.sin(a)*12,dist=Math.hypot(fingerX-hitch.x,fingerY-hitch.y),catching=input.reach&&state.arm>.9&&dist<20;"
+          if old not in s: raise SystemExit('arm collision block not found')
+          s=s.replace(old,new,1)
+
+          s=s.replace("toast('GET BESIDE THE TRAILER — THEN HOLD REACH!')","toast('LINE UP WITH THE TRAILER — AIM THE ARM, THEN HOLD REACH!')",1)
+
+          p.write_text(s)
+          PY
+          rm .github/workflows/add-arm-angle-controls.yml
+      - name: Commit arm controls
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add adjustable arm angle controls"
+          git push
